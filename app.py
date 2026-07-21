@@ -7,7 +7,11 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import DashScopeEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_community.chat_models.tongyi import ChatTongyi
-from langchain.chains import RetrievalQA
+# 兼容新旧版本的 LangChain 导入
+try:
+    from langchain.chains import RetrievalQA
+except ImportError:
+    from langchain.chains.retrieval_qa import RetrievalQA
 from langchain.prompts import PromptTemplate
 
 # 加载 .env 文件
