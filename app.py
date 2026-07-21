@@ -115,14 +115,14 @@ if uploaded_file is not None:
         st.success("✅ 文档处理完成，可以提问了！")
 
         # 调试面板
-        with st.expander("🔍 调试：查看检索到的文本块"):
-            sample_q = "实验目的 实验要求"
-            retrieved_docs = retriever.get_relevant_documents(sample_q)
-            st.write(f"共检索到 {len(retrieved_docs)} 个文本块：")
-            for i, doc in enumerate(retrieved_docs):
-                st.write(f"--- 块 {i + 1} ---")
-                st.write(doc.page_content[:400])
-                st.write("---")
+        # with st.expander("🔍 调试：查看检索到的文本块"):
+        #     sample_q = "实验目的 实验要求"
+        #     retrieved_docs = retriever.get_relevant_documents(sample_q)
+        #     st.write(f"共检索到 {len(retrieved_docs)} 个文本块：")
+        #     for i, doc in enumerate(retrieved_docs):
+        #         st.write(f"--- 块 {i + 1} ---")
+        #         st.write(doc.page_content[:400])
+        #         st.write("---")
 
         # 提问与回答
         question = st.text_input("请输入你的问题：")
