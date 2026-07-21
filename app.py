@@ -112,13 +112,13 @@ if uploaded_file is not None:
         retriever = vectordb.as_retriever(search_kwargs={"k": 20})
 
         # ===== 5. 创建问答链（直接传入 Prompt）=====
-        qa_chain = RetrievalQA.from_chain_type(
-            llm=llm,
-            chain_type="stuff",
-            retriever=retriever,
-            return_source_documents=True,
-            chain_type_kwargs={"prompt": PROMPT}
-        )
+       qa_chain = RetrievalQA.from_chain_type(
+    llm=llm,
+    chain_type="stuff",
+    retriever=retriever,
+    return_source_documents=True
+)
+qa_chain.combine_documents_chain.llm_chain.prompt = PROMPT
 
         st.success("✅ 文档处理完成，可以提问了！")
 
