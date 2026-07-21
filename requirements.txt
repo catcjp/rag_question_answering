@@ -5,3 +5,4 @@ langchain-chroma
 pypdf
 python-dotenv
 dashscope
+langchain-chains
