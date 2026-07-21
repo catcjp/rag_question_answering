@@ -7,11 +7,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import DashScopeEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_community.chat_models.tongyi import ChatTongyi
-# 兼容新旧版本的 LangChain 导入
-try:
-    from langchain.chains import RetrievalQA
-except ImportError:
-    from langchain.chains.retrieval_qa import RetrievalQA
+from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
 
 # 加载 .env 文件
@@ -20,7 +16,7 @@ load_dotenv()
 st.set_page_config(page_title="RAG 智能问答助手", layout="centered")
 st.title("📚 智能问答助手")
 
-# ===== 1. 配置 API Key（仅从环境变量读取，不硬编码）=====
+# ===== 1. 配置 API Key（仅从环境变量读取）=====
 api_key = os.getenv("DASHSCOPE_API_KEY")
 if not api_key:
     st.error("❌ 未找到 API Key，请在项目根目录创建 .env 文件并设置 DASHSCOPE_API_KEY")
@@ -68,7 +64,7 @@ PROMPT = PromptTemplate(
 uploaded_file = st.file_uploader("上传你的 PDF 文档", type="pdf")
 
 if uploaded_file is not None:
-    # ===== 自动清理旧向量库（防止新旧数据混在一起）=====
+    # 自动清理旧向量库
     current_file = uploaded_file.name
     if st.session_state.get("last_file") != current_file:
         st.session_state["cleaned"] = False
@@ -89,11 +85,9 @@ if uploaded_file is not None:
         f.write(uploaded_file.read())
 
     with st.spinner("正在处理文档..."):
-        # 加载 PDF
         loader = PyPDFLoader(pdf_path)
         docs = loader.load()
 
-        # 分割文本（优化分隔符顺序：优先按段落、句子切分）
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000,
             chunk_overlap=200,
@@ -101,28 +95,26 @@ if uploaded_file is not None:
         )
         chunks = text_splitter.split_documents(docs)
 
-        # 向量化并存入 Chroma
         vectordb = Chroma.from_documents(
             documents=chunks,
             embedding=embeddings,
             persist_directory="./chroma_db"
         )
 
-        # 创建检索器
         retriever = vectordb.as_retriever(search_kwargs={"k": 20})
 
-        # ===== 5. 创建问答链（直接传入 Prompt）=====
-       qa_chain = RetrievalQA.from_chain_type(
-    llm=llm,
-    chain_type="stuff",
-    retriever=retriever,
-    return_source_documents=True
-)
-qa_chain.combine_documents_chain.llm_chain.prompt = PROMPT
+        # 创建问答链
+        qa_chain = RetrievalQA.from_chain_type(
+            llm=llm,
+            chain_type="stuff",
+            retriever=retriever,
+            return_source_documents=True
+        )
+        qa_chain.combine_documents_chain.llm_chain.prompt = PROMPT
 
         st.success("✅ 文档处理完成，可以提问了！")
 
-        # ===== 6. 调试面板（放在 if 内部，确保 retriever 已定义）=====
+        # 调试面板
         with st.expander("🔍 调试：查看检索到的文本块"):
             sample_q = "实验目的 实验要求"
             retrieved_docs = retriever.get_relevant_documents(sample_q)
@@ -132,7 +124,7 @@ qa_chain.combine_documents_chain.llm_chain.prompt = PROMPT
                 st.write(doc.page_content[:400])
                 st.write("---")
 
-        # ===== 7. 提问与回答 =====
+        # 提问与回答
         question = st.text_input("请输入你的问题：")
         if question:
             with st.spinner("思考中..."):
@@ -142,7 +134,6 @@ qa_chain.combine_documents_chain.llm_chain.prompt = PROMPT
 
                 st.write("**回答：**", answer)
 
-                # 显示引用来源
                 if source_docs:
                     st.markdown("---")
                     st.markdown("📖 **引用来源：**")
