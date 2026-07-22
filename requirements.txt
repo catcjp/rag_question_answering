@@ -1,6 +1,6 @@
-streamlit
-langchain
-langchain-community
-pypdf
-python-dotenv
-dashscope
+streamlit==1.28.0
+langchain==0.2.17
+langchain-community==0.2.16
+pypdf==3.17.4
+python-dotenv==1.0.0
+dashscope==1.14.1
