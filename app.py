@@ -23,10 +23,24 @@ if not api_key:
 embeddings = DashScopeEmbeddings(model="text-embedding-v1", dashscope_api_key=api_key)
 llm = ChatTongyi(model="qwen-max", temperature=0.1, dashscope_api_key=api_key)
 
-prompt_template = """基于以下【上下文】回答用户的问题。如果上下文没有相关信息，请直接说“未找到”。不要编造。
+prompt_template = """你是一个严谨的实验报告分析助手。请严格基于以下【上下文】信息回答用户的问题。
 
-【上下文】：{context}
-【问题】：{question}
+【回答要求】：
+1. 如果用户问"总结"、"介绍"或"概述"，请按以下结构分点回答：
+   - 实验目的/目标
+   - 实验要求/任务列表（保留编号）
+   - 关键技术点
+   - 实验结果或提交要求
+2. 如果文档中包含代码或具体数值，请在回答中尽量保留这些细节。
+3. 如果【上下文】中的信息不完整，请说明哪些内容在文档中未提及。
+4. 绝对不要使用你自己的知识补充文档中没有的内容。
+
+【上下文】：
+{context}
+
+【问题】：
+{question}
+
 【回答】："""
 PROMPT = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
 
@@ -54,10 +68,14 @@ if uploaded_file is not None:
     with st.spinner("正在处理..."):
         loader = PyPDFLoader(pdf_path)
         docs = loader.load()
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=800,
+    chunk_overlap=150,
+    separators=["\n\n", "\n", "。", "！", "？", "；", " ", ""]
+)
         chunks = text_splitter.split_documents(docs)
         vectordb = Chroma.from_documents(documents=chunks, embedding=embeddings)
-        retriever = vectordb.as_retriever(search_kwargs={"k": 20})
+        retriever = vectordb.as_retriever(search_kwargs={"k": 10})
         qa_chain = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, return_source_documents=True)
         qa_chain.combine_documents_chain.llm_chain.prompt = PROMPT
         st.success("✅ 文档已就绪，可以提问了！")
