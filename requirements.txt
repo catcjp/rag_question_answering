@@ -1,7 +1,9 @@
 streamlit
-langchain==0.2.17
-langchain-community==0.2.16
-pypdf==3.17.4
-python-dotenv==1.0.0
-dashscope==1.14.1
-chromadb
+langchain
+langchain-community
+pypdf
+python-dotenv
+dashscope
+docx2txt
+python-docx
+unstructured
