@@ -23,7 +23,7 @@ if not api_key:
 embeddings = DashScopeEmbeddings(model="text-embedding-v1", dashscope_api_key=api_key)
 llm = ChatTongyi(model="qwen-max", temperature=0.1, dashscope_api_key=api_key)
 
-# ===== 通用 Prompt =====
+# ===== 深度分析 Prompt =====
 prompt_template = """你是一个专业的学术文档分析助手。请严格基于以下【上下文】信息回答用户的问题。
 
 【回答要求】：
@@ -67,7 +67,7 @@ PROMPT = PromptTemplate(template=prompt_template, input_variables=["context", "q
 uploaded_files = st.file_uploader(
     "上传你的 PDF 文档（可多选）", 
     type="pdf", 
-    accept_multiple_files=True,  # 允许多选
+    accept_multiple_files=True,
     key="file_uploader"
 )
 
@@ -88,7 +88,7 @@ if uploaded_files:
             st.warning("旧数据正在使用，请重启后重试。")
             st.stop()
 
-    all_chunks = []  # 存储所有文件的chunks
+    all_chunks = []
     total_pages = 0
 
     for uploaded_file in uploaded_files:
@@ -107,11 +107,10 @@ if uploaded_files:
                 separators=["\n\n", "\n", "。", "！", "？", "；", " ", ""]
             )
             chunks = text_splitter.split_documents(docs)
-            all_chunks.extend(chunks)  # 合并所有chunks
+            all_chunks.extend(chunks)
 
     st.write(f"📄 共处理 {len(uploaded_files)} 个文件，{total_pages} 页")
 
-    # 一次性向量化所有文档
     with st.spinner("正在构建向量索引..."):
         vectordb = Chroma.from_documents(documents=all_chunks, embedding=embeddings)
         retriever = vectordb.as_retriever(search_kwargs={"k": 30})
@@ -126,20 +125,20 @@ if uploaded_files:
 
     st.success(f"✅ {len(uploaded_files)} 个文档已就绪，可以提问了！")
 
-        # 调试面板：查看检索到的文本块
-        with st.expander("🔍 调试：查看检索到的文本块"):
-            sample_q = "总结 介绍"
-            try:
-                retrieved_docs = retriever.get_relevant_documents(sample_q)
-                st.write(f"共检索到 {len(retrieved_docs)} 个文本块：")
-                for i, doc in enumerate(retrieved_docs):
-                    st.write(f"--- 块 {i+1} ---")
-                    st.write(doc.page_content[:400])
-                    st.write("---")
-            except Exception as e:
-                st.warning(f"调试失败: {e}")
+    # 调试面板
+    with st.expander("🔍 调试：查看检索到的文本块"):
+        sample_q = "总结 介绍"
+        try:
+            retrieved_docs = retriever.get_relevant_documents(sample_q)
+            st.write(f"共检索到 {len(retrieved_docs)} 个文本块：")
+            for i, doc in enumerate(retrieved_docs):
+                st.write(f"--- 块 {i+1} ---")
+                st.write(doc.page_content[:400])
+                st.write("---")
+        except Exception as e:
+            st.warning(f"调试失败: {e}")
 
-    # 使用 st.form 稳定交互
+    # 提问表单
     with st.form(key="qa_form"):
         question = st.text_input("请输入你的问题：")
         submitted = st.form_submit_button("提问")
