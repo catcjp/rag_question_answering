@@ -8,12 +8,8 @@ from langchain_community.embeddings import DashScopeEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_community.chat_models.tongyi import ChatTongyi
 from langchain.prompts import PromptTemplate
-
-# 兼容性导入 RetrievalQA
-try:
-    from langchain.chains import RetrievalQA
-except ImportError:
-    from langchain.chains.retrieval_qa import RetrievalQA
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain.chains import create_retrieval_chain
 
 load_dotenv()
 
@@ -65,10 +61,8 @@ def load_document(file_path, file_type):
     return loader.load()
 
 # 初始化 session_state
-if "qa_chain" not in st.session_state:
-    st.session_state.qa_chain = None
-if "retriever" not in st.session_state:
-    st.session_state.retriever = None
+if "chain" not in st.session_state:
+    st.session_state.chain = None
 if "uploaded" not in st.session_state:
     st.session_state.uploaded = False
 
@@ -113,28 +107,23 @@ if uploaded_files and not st.session_state.uploaded:
     with st.spinner("构建索引..."):
         vectordb = Chroma.from_documents(documents=all_chunks, embedding=embeddings)
         retriever = vectordb.as_retriever(search_kwargs={"k": 30})
-        qa_chain = RetrievalQA.from_chain_type(
-            llm=llm,
-            chain_type="stuff",
-            retriever=retriever,
-            return_source_documents=True,
-            chain_type_kwargs={"prompt": PROMPT}
-        )
-        st.session_state.qa_chain = qa_chain
-        st.session_state.retriever = retriever
+        # 新 API：创建文档链和检索链
+        combine_docs_chain = create_stuff_documents_chain(llm, PROMPT)
+        retrieval_chain = create_retrieval_chain(retriever, combine_docs_chain)
+        st.session_state.chain = retrieval_chain
         st.session_state.uploaded = True
 
     st.success(f"✅ {len(uploaded_files)} 个文档已就绪")
 
 # 提问
-if st.session_state.qa_chain:
+if st.session_state.chain:
     question = st.text_input("请输入你的问题：")
     if st.button("提问"):
         if question:
             with st.spinner("思考中..."):
-                result = st.session_state.qa_chain.invoke({"query": question})
-                answer = result["result"]
-                source_docs = result.get("source_documents", [])
+                result = st.session_state.chain.invoke({"input": question})
+                answer = result["answer"]
+                source_docs = result.get("context", [])
                 st.write("**回答：**", answer)
                 if source_docs:
                     st.write("---")
