@@ -7,8 +7,13 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import DashScopeEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_community.chat_models.tongyi import ChatTongyi
-from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
+
+# 兼容性导入 RetrievalQA
+try:
+    from langchain.chains import RetrievalQA
+except ImportError:
+    from langchain.chains.retrieval_qa import RetrievalQA
 
 load_dotenv()
 
@@ -23,7 +28,6 @@ if not api_key:
 embeddings = DashScopeEmbeddings(model="text-embedding-v1", dashscope_api_key=api_key)
 llm = ChatTongyi(model="qwen-max", temperature=0.1, dashscope_api_key=api_key)
 
-# ===== 深度分析 Prompt =====
 prompt_template = """你是一个专业的学术文档分析助手。请严格基于以下【上下文】信息回答用户的问题。
 
 【回答要求】：
