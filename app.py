@@ -2,7 +2,12 @@ import streamlit as st
 import os
 import shutil
 from dotenv import load_dotenv
-from langchain_community.document_loaders import PyPDFLoader
+from langchain_community.document_loaders import (
+    PyPDFLoader,
+    TextLoader,
+    Docx2txtLoader,
+    UnstructuredMarkdownLoader
+)
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import DashScopeEmbeddings
 from langchain_community.vectorstores import Chroma
@@ -64,12 +69,27 @@ prompt_template = """你是一个专业的学术文档分析助手。请严格�
 【回答】："""
 PROMPT = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
 
+# ===== 文件上传（多格式） =====
 uploaded_files = st.file_uploader(
-    "上传你的 PDF 文档（可多选）", 
-    type="pdf", 
+    "上传你的文档（支持 PDF / TXT / DOCX / MD，可多选）",
+    type=["pdf", "txt", "docx", "md"],
     accept_multiple_files=True,
     key="file_uploader"
 )
+
+# ===== 根据文件类型选择加载器 =====
+def load_document(file_path, file_type):
+    if file_type == "pdf":
+        loader = PyPDFLoader(file_path)
+    elif file_type == "txt":
+        loader = TextLoader(file_path, encoding="utf-8")
+    elif file_type == "docx":
+        loader = Docx2txtLoader(file_path)
+    elif file_type == "md":
+        loader = UnstructuredMarkdownLoader(file_path)
+    else:
+        raise ValueError(f"不支持的文件类型: {file_type}")
+    return loader.load()
 
 if uploaded_files:
     # 清理旧向量库（当文件列表变化时）
@@ -92,13 +112,17 @@ if uploaded_files:
     total_pages = 0
 
     for uploaded_file in uploaded_files:
-        pdf_path = f"./temp_{uploaded_file.name}"
-        with open(pdf_path, "wb") as f:
+        # 保存临时文件
+        file_path = f"./temp_{uploaded_file.name}"
+        with open(file_path, "wb") as f:
             f.write(uploaded_file.read())
 
+        # 获取文件扩展名
+        file_ext = os.path.splitext(uploaded_file.name)[1][1:].lower()
+        st.info(f"正在处理: {uploaded_file.name} ({file_ext})")
+
         with st.spinner(f"正在处理: {uploaded_file.name}..."):
-            loader = PyPDFLoader(pdf_path)
-            docs = loader.load()
+            docs = load_document(file_path, file_ext)
             total_pages += len(docs)
 
             text_splitter = RecursiveCharacterTextSplitter(
@@ -107,9 +131,12 @@ if uploaded_files:
                 separators=["\n\n", "\n", "。", "！", "？", "；", " ", ""]
             )
             chunks = text_splitter.split_documents(docs)
+            # 为每个 chunk 添加文件名元数据（便于来源显示）
+            for chunk in chunks:
+                chunk.metadata["file_name"] = uploaded_file.name
             all_chunks.extend(chunks)
 
-    st.write(f"📄 共处理 {len(uploaded_files)} 个文件，{total_pages} 页")
+    st.write(f"📄 共处理 {len(uploaded_files)} 个文件，{total_pages} 页（总块数: {len(all_chunks)}）")
 
     with st.spinner("正在构建向量索引..."):
         vectordb = Chroma.from_documents(documents=all_chunks, embedding=embeddings)
@@ -132,7 +159,8 @@ if uploaded_files:
             retrieved_docs = retriever.get_relevant_documents(sample_q)
             st.write(f"共检索到 {len(retrieved_docs)} 个文本块：")
             for i, doc in enumerate(retrieved_docs):
-                st.write(f"--- 块 {i+1} ---")
+                file_name = doc.metadata.get("file_name", "未知文件")
+                st.write(f"--- 块 {i+1} (来自: {file_name}) ---")
                 st.write(doc.page_content[:400])
                 st.write("---")
         except Exception as e:
@@ -147,4 +175,20 @@ if uploaded_files:
         with st.spinner("思考中..."):
             result = qa_chain.invoke({"query": question})
             answer = result["result"]
+            source_docs = result.get("source_documents", [])
+
             st.write("**回答：**", answer)
+
+            # ===== 显示引用来源 =====
+            if source_docs:
+                st.markdown("---")
+                st.markdown("📖 **引用来源：**")
+                seen = set()
+                for doc in source_docs:
+                    file_name = doc.metadata.get("file_name", "未知文件")
+                    page = doc.metadata.get("page", "未知页码")
+                    snippet = doc.page_content[:150].replace("\n", " ")
+                    key = f"{file_name}_{page}"
+                    if key not in seen:
+                        seen.add(key)
+                        st.markdown(f"- **文件**: {file_name}，**第{page}页**：{snippet}...")
