@@ -68,14 +68,17 @@ if uploaded_file is not None:
     with st.spinner("正在处理..."):
         loader = PyPDFLoader(pdf_path)
         docs = loader.load()
+        if docs:
+    st.write(f"PDF 总页数: {len(docs)}")
+    st.write(f"第一页前200字符: {docs[0].page_content[:200]}")
         text_splitter = RecursiveCharacterTextSplitter(
-    chunk_size=800,
-    chunk_overlap=150,
+    chunk_size=500,
+    chunk_overlap=100,
     separators=["\n\n", "\n", "。", "！", "？", "；", " ", ""]
 )
         chunks = text_splitter.split_documents(docs)
         vectordb = Chroma.from_documents(documents=chunks, embedding=embeddings)
-        retriever = vectordb.as_retriever(search_kwargs={"k": 15})
+        retriever = vectordb.as_retriever(search_kwargs={"k": 30})
         qa_chain = RetrievalQA.from_chain_type(
     llm=llm,
     chain_type="stuff",
