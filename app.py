@@ -75,9 +75,14 @@ if uploaded_file is not None:
 )
         chunks = text_splitter.split_documents(docs)
         vectordb = Chroma.from_documents(documents=chunks, embedding=embeddings)
-        retriever = vectordb.as_retriever(search_kwargs={"k": 10})
-        qa_chain = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, return_source_documents=True)
-        qa_chain.combine_documents_chain.llm_chain.prompt = PROMPT
+        retriever = vectordb.as_retriever(search_kwargs={"k": 15})
+        qa_chain = RetrievalQA.from_chain_type(
+    llm=llm,
+    chain_type="stuff",
+    retriever=retriever,
+    return_source_documents=True,
+    chain_type_kwargs={"prompt": PROMPT}
+)
         st.success("✅ 文档已就绪，可以提问了！")
 
     # 使用 st.form 稳定交互
