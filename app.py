@@ -69,7 +69,6 @@ if "uploaded" not in st.session_state:
     st.session_state.uploaded = False
 
 if uploaded_files and not st.session_state.uploaded:
-    # 处理文件
     current_files = sorted([f.name for f in uploaded_files])
     current_key = "_".join(current_files)
     if st.session_state.get("last_files_key") != current_key:
