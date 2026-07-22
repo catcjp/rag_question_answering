@@ -68,9 +68,9 @@ if uploaded_file is not None:
     with st.spinner("正在处理..."):
         loader = PyPDFLoader(pdf_path)
         docs = loader.load()
-        if docs:
-    st.write(f"PDF 总页数: {len(docs)}")
-    st.write(f"第一页前200字符: {docs[0].page_content[:200]}")
+       if docs:
+        st.write(f"📄 PDF 总页数: {len(docs)}")
+        st.write(f"📝 第一页前200字符: {docs[0].page_content[:200]}")
         text_splitter = RecursiveCharacterTextSplitter(
     chunk_size=500,
     chunk_overlap=100,
