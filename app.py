@@ -56,7 +56,7 @@ if uploaded_file is not None:
         docs = loader.load()
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         chunks = text_splitter.split_documents(docs)
-        vectordb = Chroma.from_documents(documents=chunks, embedding=embeddings, persist_directory="./chroma_db")
+        vectordb = Chroma.from_documents(documents=chunks, embedding=embeddings)
         retriever = vectordb.as_retriever(search_kwargs={"k": 20})
         qa_chain = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, return_source_documents=True)
         qa_chain.combine_documents_chain.llm_chain.prompt = PROMPT
