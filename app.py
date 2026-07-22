@@ -107,7 +107,7 @@ if uploaded_files and not st.session_state.uploaded:
     with st.spinner("构建索引..."):
         vectordb = Chroma.from_documents(documents=all_chunks, embedding=embeddings)
         retriever = vectordb.as_retriever(search_kwargs={"k": 30})
-        # 新 API：创建文档链和检索链
+        # 新 API
         combine_docs_chain = create_stuff_documents_chain(llm, PROMPT)
         retrieval_chain = create_retrieval_chain(retriever, combine_docs_chain)
         st.session_state.chain = retrieval_chain
