@@ -47,7 +47,7 @@ pip install -r requirements.txt
 # 在项目根目录创建 .env 文件，写入：
 # DASHSCOPE_API_KEY=你的密钥
 
-# 4. 启动应用
+# 4. 启动项目
 streamlit run app.py
 ```
 
